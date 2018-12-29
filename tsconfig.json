@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "sourceMap": true,
+    "target": "es6",
+    "module": "commonjs",
+    "jsx": "react",
+    "moduleResolution": "classic",
+    "lib": [ "es2015", "dom", "es2017" ],
+    "experimentalDecorators": true,
+
+    "paths": {
+      "lit-html": [ "node_modules/lit-html/src/lit-html.ts" ],
+      "cxs": [ "node_modules/cxs/dist/index.js" ]
+    }
+  }
+}
