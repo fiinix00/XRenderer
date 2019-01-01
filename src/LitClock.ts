@@ -31,7 +31,7 @@ export default class LitClock extends XElement {
 
     //<g transform='rotate(${ 6 * this.date.getSeconds()})'> 
     //+ this.date.getMilliseconds() / 165
-
+    
     render() {
         return html`
             
@@ -53,7 +53,7 @@ export default class LitClock extends XElement {
 
         <div class='${square}'> <!-- so the SVG keeps its aspect ratio -->
 
-            <x-dogs a="10"></x-dogs>
+            <x-dog-list></x-dog-list>
             
             <svg viewBox='0 0 100 100'>
             

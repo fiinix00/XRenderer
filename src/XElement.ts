@@ -1,10 +1,31 @@
 
-import { render, TemplateResult } from "lit-html";
+import { render, TemplateResult, directive, AttributePart } from "lit-html";
 
 let idCounter: number = 0;
 const owners = new Map<String, Object>();
 
-abstract class XElement extends HTMLElement {
+interface IVersionId {
+    readonly version: number;
+    readonly identifier: number;
+}
+
+const assign = directive((v: any) => (part: AttributePart) => {
+    const committer = part.committer;
+    const element = committer.element;
+    const name = committer.name;
+
+    const current = element[name];
+
+    if (current != v) {
+        element[name] = v;
+    }
+
+    //if (part.value !== v) {
+    //    part.setValue(v)
+    //}
+});
+
+abstract class XElement<TData = any> extends HTMLElement implements IVersionId {
     private readonly _id: number;
     private _version: number;
 
@@ -12,12 +33,10 @@ abstract class XElement extends HTMLElement {
     private _isRendering: boolean = false;
 
     protected _shadowRoot: ShadowRoot;
-
-    private owner: any;
-    private storage: any;
-    protected data: any;
-    private oversion: string;
-    private oid: string;
+    
+    protected data: TData;
+    
+    private dataAttribute: string = null;
 
     get identifier(): number { return this._id; }
     get version(): number { return this._version; }
@@ -26,7 +45,6 @@ abstract class XElement extends HTMLElement {
         super();
 
         this._shadowRoot = this.attachShadow({ mode: 'open' });
-        this._shadowRoot.appendChild(document.createElement("div"));
 
         this._id = idCounter++;
         this._version = 0;
@@ -34,40 +52,28 @@ abstract class XElement extends HTMLElement {
         owners[this.identifier] = this;
     }
 
-    updateVersion(): void {
+    updateVersion(invalidate = true): void {
         this._version++;
+
+        if (invalidate) {
+            this.invalidate();
+        }
     }
 
     differs<T>(a: T, b: T): boolean {
         return a !== b;
     }
 
+    static nameofRegExp1: RegExp = /return\s+([A-Z$_.]+)/i;
+    static nameofRegExp2: RegExp = /.*?(?:=>|function.*?{(?!\s*return))\s*([A-Z$_.]+)/i;
+
     nameof(selector: () => any, fullname: boolean = false): string {
-        var s = '' + selector;
-        var m = s.match(/return\s+([A-Z$_.]+)/i) || s.match(/.*?(?:=>|function.*?{(?!\s*return))\s*([A-Z$_.]+)/i);
+        var s = selector.toString();
+        var m = s.match(XElement.nameofRegExp1) || s.match(XElement.nameofRegExp2);
         var name = m && m[1] || "";
         return fullname ? name : name.split('.').reverse()[0];
     }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-
-        if (name === "owner") { //step 1
-            this.owner = owners[newValue];
-        }
-        else if (name === "storage") { //step 2
-            this.storage = this.owner[newValue];
-        }
-        else if (name === "oindex") { //step 3
-            this.data = this.storage[newValue];
-        }
-        else if (name === "oid") { //invalidator
-            this.oid = newValue;
-        }
-        else if (name === "oversion") { //invalidator
-            this.oversion = newValue;
-        }
-    }
-
+    
     abstract render(): TemplateResult;
 
     invalidate() {
@@ -79,7 +85,11 @@ abstract class XElement extends HTMLElement {
                 //    return templateFactory(result);
                 //}
 
-                render(this.render(), this.shadowRoot); //, { templateFactory: tf });
+                const rendered = this.render();
+
+                if (rendered !== null) {
+                    render(rendered, this.shadowRoot); //, { templateFactory: tf });
+                }
             }
             this._isRendering = false;
         }
@@ -96,10 +106,6 @@ abstract class XElement extends HTMLElement {
         this._isMounted = false;
         delete owners[this.identifier];
     }
-
-    static get observedAttributes() {
-        return ["owner", "storage", "oindex", "oid", "oversion"];
-    }
 }
 
 interface Is {
@@ -112,7 +118,7 @@ function registerElement(constructor: Function) {
     if (!("is" in ctor)) {
         throw new Error(`Missing 'static is: string' property on type \n${constructor}`);
     }
-
+    
     customElements.define(ctor.is, constructor);
 }
 
@@ -122,4 +128,4 @@ function uses(...types: Function[]) { // this is the decorator factory
     }
 }
 
-export { XElement as default, registerElement, uses };
+export { XElement as default, registerElement, uses, IVersionId, assign };

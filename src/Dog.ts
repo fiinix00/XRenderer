@@ -1,6 +1,7 @@
 
-import { html } from "lit-html";
-import XElement, { registerElement } from "./XElement";
+import { html, directive, isDirective, AttributePart } from "lit-html";
+import XElement, { registerElement, assign } from "./XElement";
+import bind from 'bind-decorator';
 
 @registerElement
 export default class Dog extends XElement {
@@ -35,9 +36,15 @@ export default class Dog extends XElement {
         }
     }
 
-    render() {
-        const data = <Dog>this.data;
+    @bind
+    increaseAge() {
+        this.age++;
+    }
 
-        return html`<p>Dog ${data.name} = ${data.age}</p>`;
+    render() {
+        return html`
+            <p onclick="${assign(this.increaseAge)}">
+                Dog ${this.name} = ${this.age}
+            </p>`;
     }
 }

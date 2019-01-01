@@ -9,10 +9,6 @@ export class Main extends XElement {
 
     static readonly is: string = "x-main";
     
-    constructor() {
-        super();
-    }
-
     render() {
         return html`<x-lit-clock></x-lit-clock>`;
     }

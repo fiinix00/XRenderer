@@ -1,15 +1,17 @@
 
-import { html } from "lit-html";
-import XElement, { registerElement } from "./XElement";
+import { html, AttributePart } from "lit-html";
+import XElement, { registerElement, IVersionId, uses, assign } from "./XElement";
 import Dog from "./Dog";
+import XRef from "./XRef";
 
+@uses(XRef)
 @registerElement
 export default class DogList extends XElement {
 
-    static readonly is: string = "x-dogs";
+    static readonly is: string = "x-dog-list";
 
     private readonly dogs: Dog[];
-
+    
     constructor() {
         super();
 
@@ -18,13 +20,13 @@ export default class DogList extends XElement {
             new Dog("Woofer", 20),
         ];
     }
-
+    
     render() {
         return html`
-        <ul class="dogs">
-            ${this.dogs.map((dog, index) => {
-                return html`<x-dog owner="${this.identifier}" storage="${this.nameof(() => this.dogs)}" oindex="${index}" oid=${dog.identifier} oversion="${dog.version}" />`;
-            })}
-        </ul>`;
+            <ul class="dogs">
+                ${this.dogs.map((dog, index) => {
+                    return html`<x-ref data="${assign(dog)}" />`;
+                })}
+            </ul>`;
     }
 }

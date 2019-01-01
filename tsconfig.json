@@ -12,7 +12,8 @@
 
     "paths": {
       "lit-html": [ "node_modules/lit-html/src/lit-html.ts" ],
-      "cxs": [ "node_modules/cxs/dist/index.js" ]
+      "cxs": [ "node_modules/cxs/dist/index.js" ],
+      "bind-decorator": [ "node_modules/bind-decorator/index.js" ]
     }
   }
 }
