@@ -25,7 +25,7 @@ const assign = directive((v: any) => (part: AttributePart) => {
     //}
 });
 
-abstract class XElement<TData = any> extends HTMLElement implements IVersionId {
+abstract class XElement extends HTMLElement implements IVersionId {
     private readonly _id: number;
     private _version: number;
 
@@ -34,10 +34,6 @@ abstract class XElement<TData = any> extends HTMLElement implements IVersionId {
 
     protected _shadowRoot: ShadowRoot;
     
-    protected data: TData;
-    
-    private dataAttribute: string = null;
-
     get identifier(): number { return this._id; }
     get version(): number { return this._version; }
 

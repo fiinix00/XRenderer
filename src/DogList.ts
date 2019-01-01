@@ -2,9 +2,9 @@
 import { html, AttributePart } from "lit-html";
 import XElement, { registerElement, IVersionId, uses, assign } from "./XElement";
 import Dog from "./Dog";
-import XRef from "./XRef";
+import XDOM from "./XDOM";
 
-@uses(XRef)
+@uses(XDOM)
 @registerElement
 export default class DogList extends XElement {
 
@@ -24,8 +24,8 @@ export default class DogList extends XElement {
     render() {
         return html`
             <ul class="dogs">
-                ${this.dogs.map((dog, index) => {
-                    return html`<x-ref data="${assign(dog)}" />`;
+                ${this.dogs.map(dog => {
+                    return html`<x-dom element="${assign(dog)}" />`;
                 })}
             </ul>`;
     }

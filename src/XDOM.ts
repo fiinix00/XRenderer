@@ -3,10 +3,12 @@ import { html } from "lit-html";
 import XElement, { registerElement } from "./XElement";
 
 @registerElement
-export default class XRef extends XElement<XElement> {
+export default class XDOM<TElement extends XElement> extends XElement {
 
-    static readonly is: string = "x-ref";
-    
+    static readonly is: string = "x-dom";
+
+    public element: TElement;
+
     render() {
         const child = this._shadowRoot.firstChild;
 
@@ -14,7 +16,7 @@ export default class XRef extends XElement<XElement> {
             this._shadowRoot.removeChild(child);
         }
 
-        this._shadowRoot.appendChild(this.data);
+        this._shadowRoot.appendChild(this.element);
 
         return null;
     }
