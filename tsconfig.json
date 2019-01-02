@@ -6,18 +6,12 @@
     "preserveSymlinks": false,
     "target": "es2018",
     "module": "esnext",
-    "moduleResolution": "classic",
+    "moduleResolution": "node",
     "lib": [ "es2015", "dom", "es2017", "es2018" ],
     "experimentalDecorators": true,
     "alwaysStrict": true,
 
     "jsx": "react",
-    "jsxFactory": "XElement",
-
-    "paths": {
-      "lit-html": [ "node_modules/lit-html/src/lit-html.ts" ],
-      "cxs": [ "node_modules/cxs/dist/index.js" ],
-      "bind-decorator": [ "node_modules/bind-decorator/index.js" ]
-    }
+    "jsxFactory": "XElement"
   }
 }
