@@ -1,5 +1,5 @@
 
-import { render, TemplateResult, directive, AttributePart } from "lit-html";
+import { render, TemplateResult, directive, AttributePart, html } from "lit-html";
 
 let idCounter: number = 0;
 const owners = new Map<String, Object>();
@@ -9,20 +9,73 @@ interface IVersionId {
     readonly identifier: number;
 }
 
-const assign = directive((v: any) => (part: AttributePart) => {
+function extractPossibleOverrideElement(element: Element) {
+    const overrideElement = (element as Element & { overrideElement?: Element }).overrideElement;
+    return overrideElement || element;
+}
+
+const assign = directive((value: any) => (part: AttributePart) => {
+    
     const committer = part.committer;
-    const element = committer.element;
+    let element = extractPossibleOverrideElement(committer.element);
+    
     const name = committer.name;
 
     const current = element[name];
-
-    if (current != v) {
-        element[name] = v;
+    
+    if (current !== value) {
+        element[name] = value;
+    } else {
+        if (typeof current === 'object' && "version" in current) {
+            if (typeof value === 'object' && "version" in value) {
+                var currentV: number = current.version;
+                var valueV: number = value.version;
+    
+                if (currentV !== valueV) {
+                    element[name] = value;
+                }
+            }
+        }
     }
 
     //if (part.value !== v) {
     //    part.setValue(v)
     //}
+});
+
+type RefType = <T extends XElement>(handler: (element: T) => void) => T;
+
+const ref = directive((assigner: (element: Node) => void) => (part: AttributePart) => {
+    const committer = part.committer;
+    const element = extractPossibleOverrideElement(committer.element);
+
+    assigner(element);
+}) as unknown as RefType;
+
+function $ /*keep comment*/(self: any, type: Function = null): TemplateResult {
+
+    console.warn("$", self);
+
+    return self;
+}
+
+interface Is {
+    is: string;
+}
+
+const supportXType = directive((value: Is & { new(): Element }) => (part: AttributePart) => {
+
+    const currentChild = part.committer.element;
+
+    if (!("overrideInitialized" in currentChild)) {
+        const newChild = new value(); //document.createElement(value.is);
+        (newChild as any).overrideInitialized = true;
+
+        currentChild.parentElement.replaceChild(newChild, currentChild);
+        part.committer.element = newChild;
+
+        (currentChild as any).overrideElement = newChild;
+    }
 });
 
 abstract class XElement extends HTMLElement implements IVersionId {
@@ -36,7 +89,7 @@ abstract class XElement extends HTMLElement implements IVersionId {
     
     get identifier(): number { return this._id; }
     get version(): number { return this._version; }
-
+    
     constructor() {
         super();
 
@@ -47,11 +100,11 @@ abstract class XElement extends HTMLElement implements IVersionId {
 
         owners[this.identifier] = this;
     }
-
-    updateVersion(invalidate = true): void {
+    
+    dataChanged(invalidate = true): void {
         this._version++;
 
-        if (invalidate) {
+        if (invalidate && !this.invalidationPaused) {
             this.invalidate();
         }
     }
@@ -70,24 +123,37 @@ abstract class XElement extends HTMLElement implements IVersionId {
         return fullname ? name : name.split('.').reverse()[0];
     }
     
-    abstract render(): TemplateResult;
+    abstract render(): TemplateResult | Node;
 
-    invalidate() {
-        if (!this._isRendering) {
-            this._isRendering = true;
-            {
-                //function tf(result: TemplateResult): Template {
-                //    debugger;
-                //    return templateFactory(result);
-                //}
+    private invalidationPaused = false;
 
-                const rendered = this.render();
+    public pauseInvalidation() { this.invalidationPaused = true; }
+    public resumeInvalidation(invalidate = true) {
+        this.invalidationPaused = false;
 
-                if (rendered !== null) {
-                    render(rendered, this.shadowRoot); //, { templateFactory: tf });
+        if (invalidate) {
+            this.invalidate();
+        }
+    }
+
+    public invalidate() {
+        if (!this.invalidationPaused) {
+            if (!this._isRendering) {
+                this._isRendering = true;
+                {
+                    //function tf(result: TemplateResult): Template {
+                    //    debugger;
+                    //    return templateFactory(result);
+                    //}
+
+                    const rendered = <any>this.render();
+
+                    if (rendered !== null) {
+                        render(rendered, this.shadowRoot); //, { templateFactory: tf });
+                    }
                 }
+                this._isRendering = false;
             }
-            this._isRendering = false;
         }
     }
 
@@ -102,10 +168,6 @@ abstract class XElement extends HTMLElement implements IVersionId {
         this._isMounted = false;
         delete owners[this.identifier];
     }
-}
-
-interface Is {
-    is: string;
 }
 
 function registerElement(constructor: Function) {
@@ -124,4 +186,4 @@ function uses(...types: Function[]) { // this is the decorator factory
     }
 }
 
-export { XElement as default, registerElement, uses, IVersionId, assign };
+export { XElement as default, registerElement, uses, IVersionId, assign, $, ref, Is, supportXType };

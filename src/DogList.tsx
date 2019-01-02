@@ -1,10 +1,8 @@
 
-import { html, AttributePart } from "lit-html";
-import XElement, { registerElement, IVersionId, uses, assign } from "./XElement";
+import { html, AttributePart, TemplateResult } from "lit-html";
+import XElement, { registerElement, IVersionId, uses, assign, $, supportXType } from "./XElement";
 import Dog from "./Dog";
-import XDOM from "./XDOM";
 
-@uses(XDOM)
 @registerElement
 export default class DogList extends XElement {
 
@@ -22,11 +20,12 @@ export default class DogList extends XElement {
     }
     
     render() {
-        return html`
+        return $(
             <ul class="dogs">
-                ${this.dogs.map(dog => {
-                    return html`<x-dom element="${assign(dog)}" />`;
-                })}
-            </ul>`;
+                ${this.dogs}
+            </ul>
+        )!;
     }
 }
+
+export const DogListX = supportXType(DogList);

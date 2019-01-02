@@ -1,14 +1,18 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
+    "esModuleInterop": false,
     "baseUrl": ".",
     "sourceMap": true,
-    "target": "es6",
-    "module": "commonjs",
-    "jsx": "react",
+    "preserveSymlinks": false,
+    "target": "es2018",
+    "module": "esnext",
     "moduleResolution": "classic",
-    "lib": [ "es2015", "dom", "es2017" ],
+    "lib": [ "es2015", "dom", "es2017", "es2018" ],
     "experimentalDecorators": true,
+    "alwaysStrict": true,
+
+    "jsx": "react",
+    "jsxFactory": "XElement",
 
     "paths": {
       "lit-html": [ "node_modules/lit-html/src/lit-html.ts" ],

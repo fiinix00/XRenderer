@@ -20,7 +20,7 @@ const terser = new TerserPlugin({
     terserOptions: {
         warnings: false,
         parse: {},
-        compress: true,
+        compress: true, 
         mangle: {
             toplevel: true,
             eval: true,
@@ -38,46 +38,71 @@ const terser = new TerserPlugin({
         keep_classnames: false,
         keep_fnames: false,
         safari10: false,
-
-        ecma: 6
+        
+        ecma: 8
     }
 });
 
 const uglifyTemplateString = require('uglify-template-string-loader');
 
-const uglifyInterolation = {
+const jsxFixupRegexp = /\$\(((?:<host>){0,1}?)?([\d|\D|\s]*?)((?:<\/host>){0,1}?)\)\!(;|!)/;
+const jsxFixup = {
     test: /\.tsx?$/,
     enforce: "pre",
     loader: 'regexp-replace-loader',
     exclude: /node_modules/,
     options: {
         match: {
-            pattern: /(?:(?:=)|(?:=>)|(?:return))(?:\s*\()?\s*(?<hasHtmlTag>(?:html))`([\d|\D]*?)`/,
+            pattern: jsxFixupRegexp,
+            flags: 'g'
+        },
+        replaceWith: () => {
+            
+            return function (raw, hostTagStart, text, hostTagEnd) {
+
+                //console.warn("args", arguments);
+
+                function fix(str) {
+                    var rep = str.replace(/=\{([\d|\D|\s]*?)\}/g, function (m, _$1) {
+                        return `=$\{${_$1}\}`
+                    });
+
+                    var f = uglifyTemplateString(`return \`${rep}\``);
+
+                    f = `(html${f.substring("return ".length)})`;
+
+                    return f;
+                }
+
+                var ret = fix(text);
+
+                //console.warn("aa", ret);
+                
+                ret = ret.replace(/\$\(([\d|\D|\s]*?)\)\!/, function (m, _$1) {
+                    return fix(_$1);
+                });
+                
+                //console.warn("bb", ret);
+
+                return ret;
+            };
+        }
+    }
+};
+
+const jsxComments = {
+    test: /\.tsx?$/,
+    enforce: "pre",
+    loader: 'regexp-replace-loader',
+    exclude: /node_modules/,
+    options: {
+        match: {
+            pattern: /{\/\*.*\/}/,
             flags: 'g'
         },
         replaceWith: () => {
             return function (match, $1) {
-
-                var hasHtmlTag = false;
-
-                for (var i = 0; i < arguments.length; i++) {
-                    var current = arguments[i];
-
-                    if (typeof current === 'object') {
-                        if ("hasHtmlTag" in current) {
-                            hasHtmlTag = true;
-                        }
-                    }
-                }
-                
-                if (hasHtmlTag) {
-                    var step1 = uglifyTemplateString(match.replace("return html`", "/*htmlLit*/return `"));
-                    var step2 = step1.replace("/*htmlLit*/return `", "return html`");
-                    
-                    return step2;
-                } else {
-                    return uglifyTemplateString(match);
-                }
+                return "";
             };
         }
     }
@@ -85,7 +110,7 @@ const uglifyInterolation = {
 
 module.exports = {
     entry: {
-        main: './src/main.ts'
+        main: './src/main.tsx'
     },
 
     devtool: false, //"cheap-source-map",
@@ -98,9 +123,10 @@ module.exports = {
     },
     module: {
         rules: [
-
-            uglifyInterolation, 
-
+            
+            jsxFixup,
+            jsxComments,
+            
             {
                 test: /\.tsx?$/,
                 exclude: /node_modules/,
@@ -115,7 +141,7 @@ module.exports = {
     ],
 
     resolve: {
-        extensions: ['.ts', '.js']
+        extensions: ['.ts', '.tsx', '.js']
     },
 
     optimization: {
