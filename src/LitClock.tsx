@@ -3,7 +3,7 @@ import { html, svg, SVGTemplateResult } from "lit-html";
 
 import { cache } from "lit-html/directives/cache";
 
-import XElement, { registerElement, uses, $, supportXType } from "./XElement";
+import XElement, { registerElement, uses, $, supportXType, getset } from "./XElement";
 import cxsStyle from "./cxsstyle";
 
 import { square, clockFace, hour, minute, secondColor, secondCounterWeight, minor, major } from "./LitClock.style";
@@ -13,11 +13,9 @@ export default class LitClock extends XElement {
 
     static readonly is: string = "x-lit-clock";
 
-    private _date: Date = new Date();
-
-    get date() { return this._date; }
-    set date(v) { this._date = v; this.dataChanged(); }
-
+    @getset()
+    private date: Date = new Date();
+    
     static interval: number = -1;
     static clocks: LitClock[] = [];
 

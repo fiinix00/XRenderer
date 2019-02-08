@@ -1,4 +1,4 @@
-import XElement, { registerElement, Is, supportXType } from "./XElement";
+import XElement, { registerElement, Is, supportXType, getset } from "./XElement";
 import { AttributePart, TemplateResult, directive } from "lit-html";
 
 export default function XInline<TExtend>(name: string, properties: string[], renderer: (self: XElement & TExtend) => TemplateResult) {
@@ -8,19 +8,7 @@ export default function XInline<TExtend>(name: string, properties: string[], ren
 
             const property = properties[i];
             
-            Object.defineProperty(setup, property, {
-                get() { return this.__[property]; },
-                set(value) {
-                    if (this.__[property] !== value) {
-                        this.__[property] = value; //assign to local, no infinitive loop thanks
-
-                        this.invalidate();
-                    }
-                },
-
-                enumerable: true,
-                configurable: false
-            });
+            getset()(setup, property);
         }
     }
 
@@ -31,14 +19,6 @@ export default function XInline<TExtend>(name: string, properties: string[], ren
 
         constructor() {
             super();
-
-            // Define property for field values   
-            Object.defineProperty(this, '__', {
-                value: Object.create(null),
-
-                enumerable: false,
-                configurable: false
-            });
         }
 
         render() {

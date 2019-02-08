@@ -11,6 +11,8 @@
     "experimentalDecorators": true,
     "alwaysStrict": true,
 
+    "emitDecoratorMetadata": false,
+
     "jsx": "react",
     "jsxFactory": "XElement"
   }

@@ -1,6 +1,11 @@
 
 import { render, TemplateResult, directive, AttributePart, html } from "lit-html";
 
+declare type ClassDecorator = <TFunction extends Function>(target: TFunction) => TFunction | void;
+declare type PropertyDecorator = (target: Object, propertyKey: string | symbol) => void;
+declare type MethodDecorator = <T>(target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => TypedPropertyDescriptor<T> | void;
+declare type ParameterDecorator = (target: Object, propertyKey: string | symbol, parameterIndex: number) => void;
+
 let idCounter: number = 0;
 const owners = new Map<String, Object>();
 
@@ -186,4 +191,67 @@ function uses(...types: Function[]) { // this is the decorator factory
     }
 }
 
-export { XElement as default, registerElement, uses, IVersionId, assign, $, ref, Is, supportXType };
+function getset() {
+
+    //Reflect.getMetadata("design:type", target, propertyKey);
+    //Interesting reflection types http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4
+
+    return (target: XElement, key: string) => {
+
+        let originalValue = target[key];
+
+        delete target[key];
+
+        const backingField = "_" + key;
+
+        Object.defineProperty(target, backingField, {
+            writable: true,
+            enumerable: false,
+            configurable: false,
+            value: originalValue
+        });
+
+        //https://gist.github.com/remojansen/16c661a7afd68e22ac6e#gistcomment-2825544
+
+        // property getter
+        const getter = function (_this: any) {
+            return _this[backingField];
+        };
+
+        // property setter
+        const setter = function (_this: any, newValue: any) {
+
+            const differ = newValue !== getter(_this);
+            
+            _this[backingField] = newValue;
+
+            if (differ)
+                _this.dataChanged();
+        };
+
+        // Create new property with getter and setter
+        Object.defineProperty(target, key, {
+            get: function () {
+                return getter(this);
+            },
+            set: function (v: any) {
+                setter(this, v);
+            },
+            enumerable: true,
+            configurable: true
+        });
+    };
+}
+
+export {
+    XElement as default,
+    registerElement,
+    uses,
+    IVersionId,
+    assign,
+    $,
+    ref,
+    Is,
+    supportXType,
+    getset
+};

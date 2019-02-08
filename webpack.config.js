@@ -3,6 +3,8 @@ const TerserPlugin = require('terser-webpack-plugin');
 const StripWhitespace = require('strip-whitespace-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 const arg_isProd = process.argv.indexOf('-p') !== -1;
 
 const minify = arg_isProd;
@@ -136,6 +138,11 @@ module.exports = {
     },
 
     plugins: [
+        new BundleAnalyzerPlugin({
+            analyzerMode: "static",
+            openAnalyzer: false,
+            reportFilename: "bundle.report.html"
+        }),
         //new StripWhitespace(),
         //terser
     ],
@@ -149,6 +156,8 @@ module.exports = {
         minimizer: minify ? [terser] : [],
 
         runtimeChunk: false,
+
+        //concatenateModules: false, //report.bundle.html - concatenated
 
         splitChunks: {
             chunks: 'all',

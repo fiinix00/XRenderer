@@ -1,7 +1,8 @@
 
 import { html } from "lit-html";
-import XElement, { registerElement, $, assign, supportXType } from "./XElement";
+import XElement, { registerElement, $, assign, supportXType, getset } from "./XElement";
 import XInline from "./XInline";
+import bind from "bind-decorator";
 
 const List = XInline<{ items: string[] }>("x-list", ["items"], self =>
     $(<ul>
@@ -15,31 +16,20 @@ const List = XInline<{ items: string[] }>("x-list", ["items"], self =>
 export default class Todo extends XElement {
     
     static readonly is: string = "x-todo";
+    
+    @getset()
+    term: string = "";
 
-    private _items: Array<string> = ["hello"];
-    private _term: string = "";
+    @getset()
+    items: string[] = ["hello"];
 
-    get term(): string { return this._term; }
-
-    set term(value: string) {
-        if (this.differs(this._term, value)) {
-            this._term = value;
-            this.dataChanged();
-        }
-    }
-
-    get items(): Array<string> { return this._items; }
-
-    set items(value: Array<string>) {
-        this._items = value;
-        this.dataChanged();
-    }
-
-    onchange = (event) => {
+    @bind
+    _onchange(event) {
         this.term = event.target.value;
     }
 
-    onsubmit = (event) => {
+    @bind
+    _onsubmit(event) {
         event.preventDefault();
 
         this.pauseInvalidation();
@@ -54,8 +44,8 @@ export default class Todo extends XElement {
         return $(
             <div>
 
-                <form onsubmit={assign(this.onsubmit)}>
-                    <input value={assign(this.term)} onchange={assign(this.onchange)} />
+                <form onsubmit={assign(this._onsubmit)}>
+                    <input value={assign(this.term)} onchange={assign(this._onchange)} />
                     <button>Submit</button>
                 </form>
                 
