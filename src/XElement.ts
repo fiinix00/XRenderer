@@ -221,7 +221,7 @@ abstract class XElement extends HTMLElement implements IVersionId {
         return fullname ? name : name.split('.').reverse()[0];
     }
     
-    abstract render(): TemplateResult | Node | string | Date;
+    abstract render(): TemplateResult | Node | string | Date | ((self: XElement) => TemplateResult);
 
     private invalidationPaused = false;
 
