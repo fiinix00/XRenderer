@@ -222,7 +222,7 @@ const XTransformer = (program) => {
 
             const isBuiltIn = tagName === tagNameLower;
 
-            const htmlHead = isBuiltIn ? ts.createTemplateHead(`<${tagNameLower} .uses=`) : ts.createTemplateHead(`<x-${tagNameLower} uses=`);
+            const htmlHead = isBuiltIn ? ts.createTemplateHead(`<${tagNameLower} .uses=`) : ts.createTemplateHead(`<x-${tagNameLower} .uses=`);
             const htmlTail = ts.createTemplateMiddle(`>`);
             const finalTail = isBuiltIn ? ts.createTemplateTail(`</${tagNameLower}>`) : ts.createTemplateTail(`</x-${tagNameLower}>`);
 
@@ -310,9 +310,27 @@ const XTransformer = (program) => {
 
             const html = ts.createTemplateExpression(htmlHead, htmlArgs);
 
-            const a = ts.createTaggedTemplate(ts.createIdentifier('html'), html);
+            /** @type {ts.Node} */
+            let currentWalk = node;
 
-            return a;
+            let hasSvgParent = false;
+
+            while (currentWalk) {
+                if (ts.isJsxElement(currentWalk)) {
+                    const tagName = currentWalk.openingElement.tagName.getFullText();
+
+                    if (tagName === "svg") {
+                        hasSvgParent = true;
+                        break;
+                    }
+                }
+
+                currentWalk = currentWalk.parent;
+            }
+
+            const template = ts.createTaggedTemplate(ts.createIdentifier(hasSvgParent ? 'svg' : 'html'), html);
+
+            return template;
 
             /*
             let properties;
