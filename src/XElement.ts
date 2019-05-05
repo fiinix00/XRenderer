@@ -402,10 +402,10 @@ function property(syncAttribute: boolean = false) {
 
         // Create new property with getter and setter
         Object.defineProperty(target, key, {
-            get: function () {
+            get: function propertyGet() {
                 return getter(this);
             },
-            set: function (v: any) {
+            set: function propertySet(v: any) {
                 setter(this, v);
             },
             enumerable: true,
