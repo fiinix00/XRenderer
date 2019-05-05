@@ -1,6 +1,6 @@
 
 import { html, AttributePart, TemplateResult } from "lit-html";
-import XElement, { registerElement, IVersionId, uses, assign, $, supportXType, ref } from "./XElement";
+import XElement, { registerElement, IVersionId, uses, assign, $, ref } from "./XElement";
 import Dog from "./Dog";
 import bind from "bind-decorator";
 
@@ -57,5 +57,3 @@ export default class DogList extends XElement {
         );
     }
 }
-
-export const DogListX = supportXType(DogList);

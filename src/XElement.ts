@@ -91,6 +91,7 @@ interface Is {
     is: string;
 }
 
+/* Deprecated
 const supportXType = directive((value: Is & { new(args?): Element }) => (part: AttributePart) => {
 
     const currentChild = part.committer.element;
@@ -105,6 +106,7 @@ const supportXType = directive((value: Is & { new(args?): Element }) => (part: A
         (currentChild as any).overrideElement = newChild;
     }
 });
+*/
 
 abstract class XElement extends HTMLElement implements IVersionId {
     private readonly _id: number;
@@ -421,7 +423,7 @@ export {
     $,
     ref,
     Is,
-    supportXType,
+    //supportXType,
     property,
     lifetime,
     update,

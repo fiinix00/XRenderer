@@ -3,7 +3,7 @@ import { html, svg, SVGTemplateResult } from "lit-html";
 
 import { cache } from "lit-html/directives/cache";
 
-import XElement, { registerElement, uses, $, supportXType, property } from "./XElement";
+import XElement, { registerElement, uses, $, property } from "./XElement";
 //import cxsStyle from "./cxsstyle";
 
 import { square, clockFace, hour, minute, secondColor, secondCounterWeight, minor, major } from "./LitClock.style";
@@ -131,5 +131,3 @@ const hourTicks = (() => {
 
     return cache(value);
 })();
-
-export const LitClockX = supportXType(LitClock);

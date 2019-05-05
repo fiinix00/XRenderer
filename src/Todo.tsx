@@ -1,6 +1,6 @@
 
 import { html } from "lit-html";
-import XElement, { registerElement, $, assign, supportXType, property } from "./XElement";
+import XElement, { registerElement, $, assign, property } from "./XElement";
 import XInline from "./XInline";
 import bind from "bind-decorator";
 
@@ -63,5 +63,3 @@ class Todo extends XElement {
 }
 
 export default Todo;
-
-export const TodoX = supportXType(Todo);

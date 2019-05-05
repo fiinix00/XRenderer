@@ -1,4 +1,4 @@
-import XElement, { registerElement, Is, supportXType, property } from "./XElement";
+import XElement, { registerElement, Is, property } from "./XElement";
 import { AttributePart, TemplateResult, directive, html } from "lit-html";
 
 export default function XInline<TExtend>(name: string, properties: string[], renderer: (self: XElement & TExtend) => TemplateResult) {
@@ -28,8 +28,7 @@ export default function XInline<TExtend>(name: string, properties: string[], ren
 
     defineProperties(XInline.prototype, properties);
 
-    const signature = XInline as unknown as XElement & TExtend & { new(props: TExtend): XElement, is: string; };
-    const component = supportXType(signature) as unknown as { commiter: () => void } & typeof signature;
+    const component = XInline as unknown as XElement & TExtend & { new(props: TExtend): XElement, is: string; };
 
     return component;
 }
