@@ -5,11 +5,11 @@ import XInline from "./XInline";
 import bind from "bind-decorator";
 
 const List = XInline<{ items: string[] }>("x-list", ["items"], self =>
-    $(<ul>
-        ${self.items.map((item, index) =>
-            $(<li key={assign(index)}>${item}</li>)!
+    (<ul>
+        {self.items.map((item, index) =>
+            <li key={assign(index)}>{item}</li>
         )}
-    </ul>)!!
+    </ul>)
 );
 
 @registerElement
@@ -44,10 +44,8 @@ class Todo extends XElement {
         this.resumeInvalidation();
     }
 
-    //<x type={List} items={assign(this.items)}></x>
-
     render() {
-        return $(
+        return (
             <div>
 
                 <form onsubmit={assign(this._onsubmit)}>
@@ -58,7 +56,7 @@ class Todo extends XElement {
                 <List items={assign(this.items)} />
                 
             </div>
-        )!;
+        );
     }
 }
 
