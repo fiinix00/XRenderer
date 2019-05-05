@@ -1,6 +1,9 @@
-﻿/.vs
+﻿\.vs/
 /buildcache
 /node_modules
 /package-lock.json
 /src/trash.txt
 /dist
+
+typescript\.d\.ts
+\.vs/

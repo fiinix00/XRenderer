@@ -1,7 +1,11 @@
+// @ts-check
+
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const StripWhitespace = require('strip-whitespace-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+const ts = require('typescript');
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
@@ -66,7 +70,35 @@ const jsxFixup = {
 
                 function fix(str) {
                     var rep = str.replace(/=\{([\d|\D|\s]*?)\}/g, function (m, _$1) {
-                        return `=$\{${_$1}\}`
+                        return `=$\{${_$1}\}`;
+                    });
+
+                    rep = rep.replace(/\<(\/|)(\w+)((\s*@*\w+=(\w|\d|\"|\{|\}|\$|\(|\)|\<|\>|\.)*)*)\s*?\/?\>/g, function (all, slash, name, attributes, e) { //<DigitalClock ad=10 de=20> </DigitalClock>
+
+                        const nameFirstChar = name.charAt(0);
+                        const nameStartsWithBigLetter = nameFirstChar === nameFirstChar.toUpperCase();
+
+                        var newName;
+
+                        if (nameStartsWithBigLetter) {
+                            if (slash === "/") {
+                                newName = `<${slash}x-${name.toLowerCase()}${attributes}>`;
+                                return newName;
+                            }
+                            else {
+                                newName = `<${slash}x-${name.toLowerCase()}${attributes} .__uses=\${${name}.name}>`;
+                                return newName;
+                            }
+                        } else {
+                            if (slash === "/") {
+                                newName = `</${name.toLowerCase()}${attributes}>`;
+                                return newName;
+                            }
+                            else {
+                                newName = `<${name.toLowerCase()}${attributes}>`;
+                                return newName;
+                            }
+                        }
                     });
 
                     var f = uglifyTemplateString(`return \`${rep}\``);
@@ -110,6 +142,208 @@ const jsxComments = {
     }
 };
 
+function updateSourceFile(sourceFile/*: ts.SourceFile*/, importMap/*: Object*/) {
+    const props = [];
+
+    //TODO: replace "_cc" with "html" import (lit-html)
+
+    for (let key in importMap) {
+        props.push(
+            ts.createPropertyAssignment(
+                ts.createLiteral(key),
+                ts.createLiteral(importMap[key]),
+            ),
+        );
+    }
+
+    return ts.updateSourceFileNode(sourceFile, [
+        ts.createVariableStatement(undefined, [
+            ts.createVariableDeclaration(
+                '_cc',
+                undefined,
+                ts.createCall(
+                    ts.createIdentifier('require'),
+                    [],
+                    [ts.createLiteral('cxs')],
+                ),
+            )
+        ]),
+        ...sourceFile.statements
+    ]);
+}
+
+const XTransformer = (program) => {
+    //Original basis code from: https://github.com/deamme/ts-transform-classcat
+
+    return (context/*: ts.TransformationContext*/)/*: ts.Transformer<ts.SourceFile>*/ => {
+        return (sourceFile/*: ts.SourceFile*/) => {
+            context['classcat'] = false;
+
+            let newSourceFile = ts.visitEachChild(sourceFile, visitor, context);
+
+            if (context['classcat']) {
+                newSourceFile = updateSourceFile(newSourceFile, context['classcat']);
+            }
+
+            return newSourceFile;
+        };
+
+        /**
+         * 
+         * @param {any} node .
+         * @returns {ts.VisitResult<ts.Node>} .
+         */
+        function visitor(node/*: ts.Node*/)/*: ts.VisitResult<ts.Node>*/ {
+            switch (node.kind) {
+                case ts.SyntaxKind.JsxElement: {
+                    //console.log(node);
+                    return visit(node/* as ts.JsxElement*/, (node /*as ts.JsxElement*/).children);
+                }
+
+                case ts.SyntaxKind.JsxSelfClosingElement:
+                    return visit(node/* as ts.JsxSelfClosingElement*/);
+
+                default:
+                    return ts.visitEachChild(node, visitor, context);
+            }
+        }
+
+        /**
+         * @param {ts.JsxElement} node .
+         * @param {ts.NodeArray<ts.JsxChild>} children .
+         * @returns {ts.Node} .
+         */
+        function visit(
+            node,//: ts.JsxElement | ts.JsxSelfClosingElement,
+            children = undefined//?: ts.NodeArray<ts.JsxChild>,
+        ) {
+            const tagName = (node.tagName || node.openingElement.tagName).getText();
+            const tagNameLower = tagName.toLowerCase();
+
+            const isBuiltIn = tagName === tagNameLower;
+
+            const htmlHead = isBuiltIn ? ts.createTemplateHead(`<${tagNameLower} .uses=`) : ts.createTemplateHead(`<x-${tagNameLower} uses=`);
+            const htmlTail = ts.createTemplateMiddle(`>`);
+            const finalTail = isBuiltIn ? ts.createTemplateTail(`</${tagNameLower}>`) : ts.createTemplateTail(`</x-${tagNameLower}>`);
+
+            /**@type {ts.NodeArray<ts.JsxAttributeLike>} */
+            let properties;
+
+            /** @type {ts.VisitResult<ts.Node>[]} */
+            let mappedChildren = [];
+
+            if (children) {
+                properties = (node/* as any*/).openingElement.attributes.properties;
+                //children.forEach(child => visitor(child));
+
+                mappedChildren = children.map(c => visitor(c));
+
+                var aaa = mappedChildren[0];
+               
+
+            } else {
+                properties = (node/* as ts.JsxSelfClosingElement*/).attributes.properties;
+            }
+
+            const htmlArgs = [ //elements are chained with for-loop below --- mid (value) => asd (key)
+                ///>ts.createTemplateSpan(ts.createIdentifier(tagName), mid),
+                ///>ts.createTemplateSpan(ts.createIdentifier("asd"), htmlTail),
+            ];
+
+            let nextValue = isBuiltIn ? ts.createStringLiteral("native") : ts.createIdentifier(tagName + ".name");
+
+            for (let i = -1; i < properties.length; i++) {
+
+                const nextt = properties[i + 1];
+
+                let nextAttr;
+
+                if (!nextt) {
+                    nextAttr = htmlTail;
+                } else {
+                    const nextAttrName = nextt.name.getFullText();
+                    nextAttr = ts.createTemplateMiddle(`${nextAttrName}=`);
+                }
+
+                const span = ts.createTemplateSpan(nextValue, nextAttr);
+
+                htmlArgs.push(span);
+
+                nextValue = properties[i + 1] && properties[i + 1].initializer;
+            }
+
+            /**
+             * @param {ts.JsxChild} c .
+             * @returns {ts.Expression} .
+             */
+            function makeChild(c) {
+                if (ts.isJsxText(c)) {
+
+                    const trimmed = c.text.trim();
+
+                    if (trimmed.length === 0) {
+                        return null;
+                    }
+                    else {
+                        return ts.createLiteral(trimmed);
+                    }
+                }
+                else if (ts.isJsxExpression(c)) {
+                    return visitor(c);
+                }
+                else if (ts.isJsxElement(c)) {
+                    return visitor(c);
+                }
+                else if (ts.isJsxSelfClosingElement(c)) {
+                    return visitor(c);
+                }
+                else {
+                    console.log("PANIC!", c);
+                    
+                    return ts.createLiteral("PANIC!!");
+                }
+            }
+
+            const aaaa = (children && children.length > 0) ? ts.createArrayLiteral(children.map(c => makeChild(c)).filter(c => c !== null)) : ts.createArrayLiteral([]);
+
+            htmlArgs.push(ts.createTemplateSpan(aaaa, finalTail));
+
+            const html = ts.createTemplateExpression(htmlHead, htmlArgs);
+
+            const a = ts.createTaggedTemplate(ts.createIdentifier('html'), html);
+
+            return a;
+
+            /*
+            let properties;
+            
+            if (children) {
+                properties = (node as any).openingElement.attributes.properties;
+                children.forEach(child => visitor(child));
+            } else {
+                properties = (node as ts.JsxSelfClosingElement).attributes.properties;
+            }
+            
+            properties.forEach((prop: any) => {
+                const propName = prop.name ? prop.name.text : '';
+                if (propName === 'class' || propName === 'className') {
+                    if (prop.initializer.kind === ts.SyntaxKind.JsxExpression) {
+                        prop.initializer.expression = ts.createCall(
+                            ts.createIdentifier('_cc'),
+                            undefined,
+                            [prop.initializer.expression],
+                        );
+                        context['classcat'] = true;
+                    }
+                }
+            });
+            
+            return node;
+            */
+        }
+    };
+};
+
 module.exports = {
     entry: {
         main: './src/main.tsx'
@@ -132,8 +366,15 @@ module.exports = {
             {
                 test: /\.tsx?$/,
                 exclude: /node_modules/,
-                use: [{ loader: "ts-loader"}]
-            },
+                loader: "ts-loader",
+                options: {
+                    getCustomTransformers: program => ({
+                        before: [
+                            XTransformer(program)
+                        ]
+                    })
+                }
+            }
         ]
     },
 

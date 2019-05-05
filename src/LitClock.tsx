@@ -3,17 +3,17 @@ import { html, svg, SVGTemplateResult } from "lit-html";
 
 import { cache } from "lit-html/directives/cache";
 
-import XElement, { registerElement, uses, $, supportXType, getset } from "./XElement";
-import cxsStyle from "./cxsstyle";
+import XElement, { registerElement, uses, $, supportXType, property } from "./XElement";
+//import cxsStyle from "./cxsstyle";
 
 import { square, clockFace, hour, minute, secondColor, secondCounterWeight, minor, major } from "./LitClock.style";
 
 @registerElement
 export default class LitClock extends XElement {
 
-    static readonly is: string = "x-lit-clock";
+    static readonly is: string = "x-litclock";
 
-    @getset()
+    @property()
     private date: Date = new Date();
     
     static interval: number = -1;
@@ -28,20 +28,20 @@ export default class LitClock extends XElement {
     }
 
     constructor() {
-        super();
-        
+        super(html);
+
+        this.style.cssFloat = "left";
+
         LitClock.clocks.push(this);
 
         if (LitClock.interval === -1) {
-            setInterval(LitClock.updateAllClocks, 1000 / 1 /*fps*/); 
+            LitClock.interval = setInterval(LitClock.updateAllClocks, 1000 / 1 /*fps*/); 
         }
     }
 
     //<g transform='rotate(${ 6 * this.date.getSeconds()})'> 
     //+ this.date.getMilliseconds() / 165
-
-    //position: absolute;
-
+    
     static hostStyle: string = `
         :host { display: inline; }
         svg {
@@ -52,10 +52,6 @@ export default class LitClock extends XElement {
 
     render() {
         return $(<host>
-            <style>
-                ${cxsStyle()}
-            </style>
-
             <style>
                 ${LitClock.hostStyle}
             </style>
@@ -88,6 +84,25 @@ export default class LitClock extends XElement {
                 </svg>
             </div>
         </host>)!;
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+        LitClock.clocks.push(this);
+    }
+
+    private static arrayRemove<T>(array: Array<T>, value: T) {
+        for (var i = array.length; i--;) {
+            if (array[i] === value) {
+                array.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+    disconnectedCallback() {
+        super.disconnectedCallback();
+        LitClock.arrayRemove(LitClock.clocks, this);
     }
 }
 

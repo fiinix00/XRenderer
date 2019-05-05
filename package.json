@@ -20,7 +20,7 @@
     "strip-whitespace-plugin": "^1.0.3",
     "terser-webpack-plugin": "^1.2.2",
     "ts-loader": "^5.3.3",
-    "typescript": "^3.3.3",
+    "typescript": "^3.5.0-dev.20190419",
     "uglify-template-string-loader": "^1.1.0",
     "webpack": "^4.29.3",
     "webpack-bundle-analyzer": "^3.0.3",

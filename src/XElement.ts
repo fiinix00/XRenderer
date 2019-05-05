@@ -1,5 +1,6 @@
 
 import { render, TemplateResult, directive, AttributePart, html } from "lit-html";
+import { AdoptedStyleSheetsType, cxsSheet } from "./cxsmod";
 
 declare type ClassDecorator = <TFunction extends Function>(target: TFunction) => TFunction | void;
 declare type PropertyDecorator = (target: Object, propertyKey: string | symbol) => void;
@@ -19,7 +20,7 @@ function extractPossibleOverrideElement(element: Element) {
     return overrideElement || element;
 }
 
-const assign = directive((value: any) => (part: AttributePart) => {
+const assignInner = directive((value: any) => (part: AttributePart) => {
     
     const committer = part.committer;
     let element = extractPossibleOverrideElement(committer.element);
@@ -48,14 +49,36 @@ const assign = directive((value: any) => (part: AttributePart) => {
     //}
 });
 
-type RefType = <T extends XElement>(handler: (element: T) => void) => T;
+function assign<TValue>(value: TValue) {
 
-const ref = directive((assigner: (element: Node) => void) => (part: AttributePart) => {
+    const a = assignInner(value);
+
+    return assignInner(value) as any as typeof a & TValue;
+}
+
+type RefType = <T extends HTMLElement>(handler: (element: T) => void) => T;
+
+const refInner = directive((assigner: (element: Node) => void) => (part: AttributePart) => {
     const committer = part.committer;
     const element = extractPossibleOverrideElement(committer.element);
 
     assigner(element);
 }) as unknown as RefType;
+
+function ref<T extends HTMLElement>() {
+    const refMap = new WeakMap();
+    const key = {};
+
+    const refInstance = refInner(a => {
+        refMap.set(key, a);
+    });
+
+    (refInstance as any).get = function () {
+        return refMap.get(key);
+    }
+
+    return refInstance as any as { get(): T };
+}
 
 function $ /*keep comment*/(self: any, type: Function = null): TemplateResult {
 
@@ -68,7 +91,7 @@ interface Is {
     is: string;
 }
 
-const supportXType = directive((value: Is & { new(): Element }) => (part: AttributePart) => {
+const supportXType = directive((value: Is & { new(args?): Element }) => (part: AttributePart) => {
 
     const currentChild = part.committer.element;
 
@@ -90,20 +113,88 @@ abstract class XElement extends HTMLElement implements IVersionId {
     private _isMounted: boolean = false;
     private _isRendering: boolean = false;
 
-    protected _shadowRoot: ShadowRoot;
+    public isMounted(): boolean {
+        return this._isMounted || false;
+    }
+
+    public readonly refs = new WeakMap();
+
+    protected _shadowRoot?: ShadowRoot;
     
     get identifier(): number { return this._id; }
     get version(): number { return this._version; }
-    
-    constructor() {
+
+    //Handlers for fast access instead of call via "connected" event
+    connectedEventHandler: () => void;
+    disconnectedEventHandler: () => void;
+
+    useShadowRoot: boolean;
+
+    constructor(htmlImport: typeof html /*make elements have "html" included*/, adoptStyleSheets = true, useShadowRoot = true) {
         super();
 
-        this._shadowRoot = this.attachShadow({ mode: 'open' });
+        this.useShadowRoot = useShadowRoot;
+
+        if (useShadowRoot) {
+            this._shadowRoot = this.attachShadow({ mode: 'open' });
+
+            if (adoptStyleSheets) {
+                (this._shadowRoot as any as AdoptedStyleSheetsType).adoptedStyleSheets = [cxsSheet];
+            }
+        }
 
         this._id = idCounter++;
         this._version = 0;
 
         owners[this.identifier] = this;
+
+        const ctor = this.constructor as any;
+        if (ctor.activated) {
+
+            const connectedArr = [];
+            const disconnectedArr = [];
+
+            const storage = [];
+
+            let index = 0;
+
+            for (let { activator, propertyKey, args } of ctor.activated) {
+
+                const { connected, disconnected } = activator(this, propertyKey, ...args);
+
+                if (connected) {
+                    connectedArr.push({ index, connected });
+                }
+
+                if (disconnected) {
+                    disconnectedArr.push({ index, disconnected });
+                }
+
+                index++;
+            }
+
+            if (connectedArr.length > 0) {
+                this.connectedEventHandler = () => {
+                    for (let { index, connected } of connectedArr) {
+                        storage[index] = connected.call(this);
+                    }
+                }
+
+                //this.addEventListener("connected", this.connectedEventHandler);
+            }
+
+            if (disconnectedArr.length > 0) {
+                this.disconnectedEventHandler = () => {
+                    for (let { index, disconnected } of disconnectedArr) {
+                        disconnected.call(this, storage[index]);
+                    }
+                }
+
+                //this.addEventListener("disconnected", this.disconnectedEventHandler);
+            }
+        }
+
+        this.pauseInvalidation();
     }
     
     dataChanged(invalidate = true): void {
@@ -128,7 +219,7 @@ abstract class XElement extends HTMLElement implements IVersionId {
         return fullname ? name : name.split('.').reverse()[0];
     }
     
-    abstract render(): TemplateResult | Node;
+    abstract render(): TemplateResult | Node | string | Date;
 
     private invalidationPaused = false;
 
@@ -154,7 +245,7 @@ abstract class XElement extends HTMLElement implements IVersionId {
                     const rendered = <any>this.render();
 
                     if (rendered !== null) {
-                        render(rendered, this.shadowRoot); //, { templateFactory: tf });
+                        render(rendered, this.useShadowRoot ? this.shadowRoot : this); //, { templateFactory: tf });
                     }
                 }
                 this._isRendering = false;
@@ -162,16 +253,55 @@ abstract class XElement extends HTMLElement implements IVersionId {
         }
     }
 
+    isFirstConnect = true;
+
     connectedCallback() {
         owners[this.identifier] = this;
         this._isMounted = true;
 
-        this.invalidate();
+        this.pauseInvalidation();
+
+        if (this.isFirstConnect) {
+            this.isFirstConnect = false;
+
+            for (let i = 0; i < this.attributes.length; i++) {
+                const attr = this.attributes[i];
+
+                const name = attr.name;
+                const value = attr.value;
+
+                this[name] = value;
+            }
+        }
+
+        this.connectedEventHandler && this.connectedEventHandler(); //this.dispatchEvent(new CustomEvent('connected', {}));
+
+        this.resumeInvalidation(true /*invalidate*/);
     }
 
     disconnectedCallback() {
         this._isMounted = false;
         delete owners[this.identifier];
+
+        this.disconnectedEventHandler && this.disconnectedEventHandler(); //this.dispatchEvent(new CustomEvent('disconnected', { }));
+    }
+
+    attributePaused = false; //if "this.@property = newValue" changes, dont trigger second change
+
+    attributeChangedCallback(name, oldValue, newValue) {
+
+        if (this.attributePaused) return;
+
+        this[name] = newValue;
+    }
+
+    static get observedAttributes(this: any) { //observedAttributes has "special this", the class itself
+
+        //Force initiate "__observedAttributes"
+        document.createElement(this.is); 
+
+        //TODO: protowalking
+        return this.prototype.__observedAttributes || [];
     }
 }
 
@@ -191,12 +321,43 @@ function uses(...types: Function[]) { // this is the decorator factory
     }
 }
 
-function getset() {
+function lifetime(activator: (...args) => { connected: Function, disconnected: Function }, ...args) {
+
+    //Reflect.getMetadata("design:type", target, propertyKey);
+    //Interesting reflection types http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4
+
+    return (target: any, propertyKey: string) => {
+
+        const ctor = target.constructor;
+
+        ctor.activated = [...(ctor.activated || []), { activator, propertyKey, args }];
+    };
+}
+
+function update(target: XElement, propertyKey: string, type: new () => any, interval: number) {
+
+    return {
+        connected: () =>
+            setInterval(function self() {
+                //immediately activated interval
+                target[propertyKey] = new type();
+                return self;
+            }(), interval),
+
+        disconnected: timer => clearInterval(timer)
+    }
+}
+
+function property(syncAttribute: boolean = false) {
 
     //Reflect.getMetadata("design:type", target, propertyKey);
     //Interesting reflection types http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4
 
     return (target: XElement, key: string) => {
+
+        const targetMod: XElement & { __observedAttributes: string[] } = target as any;
+
+        targetMod.__observedAttributes = (targetMod.__observedAttributes && [...targetMod.__observedAttributes, key]) || [key];
 
         let originalValue = target[key];
 
@@ -225,8 +386,16 @@ function getset() {
             
             _this[backingField] = newValue;
 
-            if (differ)
+            if (differ) {
                 _this.dataChanged();
+
+                if (syncAttribute) {
+                    _this.attributePaused = true; {
+                        _this.setAttribute(key, newValue);
+                    }
+                    _this.attributePaused = false;
+                }
+            }
         };
 
         // Create new property with getter and setter
@@ -253,5 +422,9 @@ export {
     ref,
     Is,
     supportXType,
-    getset
+    property,
+    lifetime,
+    update,
+
+    //lifetime
 };

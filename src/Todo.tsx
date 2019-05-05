@@ -1,6 +1,6 @@
 
 import { html } from "lit-html";
-import XElement, { registerElement, $, assign, supportXType, getset } from "./XElement";
+import XElement, { registerElement, $, assign, supportXType, property } from "./XElement";
 import XInline from "./XInline";
 import bind from "bind-decorator";
 
@@ -13,14 +13,18 @@ const List = XInline<{ items: string[] }>("x-list", ["items"], self =>
 );
 
 @registerElement
-export default class Todo extends XElement {
-    
+class Todo extends XElement {
+
+    constructor() {
+        super(html);
+    }
+
     static readonly is: string = "x-todo";
     
-    @getset()
+    @property()
     term: string = "";
 
-    @getset()
+    @property()
     items: string[] = ["hello"];
 
     @bind
@@ -39,7 +43,9 @@ export default class Todo extends XElement {
         }
         this.resumeInvalidation();
     }
-    
+
+    //<x type={List} items={assign(this.items)}></x>
+
     render() {
         return $(
             <div>
@@ -48,11 +54,14 @@ export default class Todo extends XElement {
                     <input value={assign(this.term)} onchange={assign(this._onchange)} />
                     <button>Submit</button>
                 </form>
+
+                <List items={assign(this.items)} />
                 
-                <x type={List} items={assign(this.items)}></x>
             </div>
         )!;
     }
 }
+
+export default Todo;
 
 export const TodoX = supportXType(Todo);

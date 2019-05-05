@@ -1,39 +1,43 @@
-import cxs from "cxs";
+import cxs from "./cxsmod";
 
-export const square = <string>cxs({
+//cxs.pushPrefix("lit");
+
+export const square = cxs({
     position: "relative",
     width: "100%",
     height: "0",
     paddingBottom: "100%"
 });
 
-export const major = <string>cxs({
-    "stroke": "#333",
-    "strokeWidth": 1
+export const major = cxs({
+    stroke: "#333",
+    strokeWidth: 1
 });
 
-export const minor = <string>cxs({
-    "stroke": "#999",
-    "strokeWidth": 0.5
+export const minor = cxs({
+    stroke: "#999",
+    strokeWidth: 0.5
 });
 
-export const hour = <string>cxs({
-    "stroke": "#333"
+export const hour = cxs({
+    stroke: "#333"
 });
 
-export const minute = <string>cxs({
-    "stroke": "#666"
+export const minute = cxs({
+    stroke: "#666"
 });
 
-export const secondColor = <string>cxs({
-    "stroke": "rgb(180,0,0)"
+export const secondColor = cxs({
+    stroke: "rgb(180,0,0)"
 });
 
-export const secondCounterWeight = <string>cxs({
-    "strokeWidth": 3
+export const secondCounterWeight = cxs({
+    strokeWidth: 3
 })
 
-export const clockFace = <string>cxs({
-    "stroke": "#333",
-    "fill": "white"
+export const clockFace = cxs({
+    stroke: "#333",
+    fill: "white"
 });
+
+//cxs.popPrefix();

@@ -1,8 +1,10 @@
 
 import cxs from "cxs";
 
+//https://github.com/mleibman/SlickGrid/issues/223 => function findCssRule(selector)
+
 //const prevLength = document.head.children.length;
-/*const colorRef = */ cxs({ "color": "#000" });
+/*const colorRef = */ /*cxs({ "color": "#000" });
 const newLength = document.head.children.length;
 
 const cxsStyleIndex = newLength;
@@ -10,7 +12,7 @@ const cxsStyleIndex = newLength;
 let lastCxsSheetLength = 0;
 let lastCxsSheet: String = null;
 
-const sheet = <CSSStyleSheet>eval(`document.head.children[${cxsStyleIndex - 1}].sheet`);
+export const sheet = <CSSStyleSheet>eval(`document.head.children[${cxsStyleIndex - 1}].sheet`);
 const styleSheet = sheet.cssRules;
 
 function cxsStyle() {
@@ -36,3 +38,5 @@ function cxsStyle() {
 }
 
 export default cxsStyle;
+
+*/

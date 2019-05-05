@@ -10,10 +10,16 @@
     "lib": [ "es2015", "dom", "es2017", "es2018" ],
     "experimentalDecorators": true,
     "alwaysStrict": true,
-
+    "allowJs": true,
     "emitDecoratorMetadata": false,
 
     "jsx": "react",
     "jsxFactory": "XElement"
-  }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
