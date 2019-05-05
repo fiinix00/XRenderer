@@ -223,8 +223,21 @@ const XTransformer = (program) => {
             const isBuiltIn = tagName === tagNameLower;
 
             const htmlHead = isBuiltIn ? ts.createTemplateHead(`<${tagNameLower} .uses=`) : ts.createTemplateHead(`<x-${tagNameLower} .uses=`);
-            const htmlTail = ts.createTemplateMiddle(`>`);
-            const finalTail = isBuiltIn ? ts.createTemplateTail(`</${tagNameLower}>`) : ts.createTemplateTail(`</x-${tagNameLower}>`);
+
+            function createTails() {
+                if (children && children.length > 0) {
+                    const htmlTail = ts.createTemplateMiddle(`>`);
+                    const finalTail = isBuiltIn ? ts.createTemplateTail(`</${tagNameLower}>`) : ts.createTemplateTail(`</x-${tagNameLower}>`);
+
+                    return { htmlTail, finalTail, separateTail: true };
+                } else {
+                    const finalTail = isBuiltIn ? ts.createTemplateTail(`></${tagNameLower}>`) : ts.createTemplateTail(`></x-${tagNameLower}>`);
+
+                    return { finalTail, separateTail: false };
+                }
+            }
+
+            const { htmlTail, finalTail, separateTail } = createTails();
 
             /**@type {ts.NodeArray<ts.JsxAttributeLike>} */
             let properties;
@@ -259,7 +272,7 @@ const XTransformer = (program) => {
                 let nextAttr;
 
                 if (!nextt) {
-                    nextAttr = htmlTail;
+                    nextAttr = separateTail ? htmlTail : finalTail;
                 } else {
                     const nextAttrName = nextt.name.getFullText();
                     nextAttr = ts.createTemplateMiddle(`${nextAttrName}=`);
@@ -304,9 +317,12 @@ const XTransformer = (program) => {
                 }
             }
 
-            const aaaa = (children && children.length > 0) ? ts.createArrayLiteral(children.map(c => makeChild(c)).filter(c => c !== null)) : ts.createArrayLiteral([]);
+            if (separateTail) {
 
-            htmlArgs.push(ts.createTemplateSpan(aaaa, finalTail));
+                const aaaa = ts.createArrayLiteral(children.map(c => makeChild(c)).filter(c => c !== null));
+
+                htmlArgs.push(ts.createTemplateSpan(aaaa, finalTail));
+            }
 
             const html = ts.createTemplateExpression(htmlHead, htmlArgs);
 
